@@ -12,11 +12,23 @@ from sklearn.metrics import mean_squared_error, r2_score
 app = Flask(__name__)
 
 def createData():
-    X, y = make_blobs(n_samples=1000, centers=3, n_features=2)
-    # df = DataFrame(dict(x=X[:,0], y=X[:,1], label=y))
+    X, y = make_blobs(n_samples=1000, centers=3, n_features=3)
     X=pd.DataFrame(X)
     y=pd.DataFrame(y)
     return X,y
+
+
+def normalize_query_param(value):
+    return value if len(value) > 1 else value[0]
+
+
+def get_params(params):
+    params_non_flat = params.to_dict(flat=False)
+    temp = {k: normalize_query_param(v) for k, v in params_non_flat.items()}
+    end = int(params["end"]) if 'end' in temp else None
+    start = int(params["start"]) if 'start' in temp else None
+    return start,end
+
 
 @app.route('/linearRegression')
 def linear():
@@ -28,7 +40,11 @@ def linear():
     y_pred = pd.DataFrame(y_pred)
     X_test['Predicted'] = y_pred
     X_test['Original'] = y_test
-    return jsonify(r2_score(y_test, y_pred))
+
+    # start,end = get_params(request.args)
+    # X_test = X_test[start:end][['Original','Predicted']]
+    return X_test.to_json(orient="index")
+
 
 @app.route('/logisticRegression')
 def logistic():
@@ -38,21 +54,16 @@ def logistic():
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
     y_pred = pd.DataFrame(y_pred)
-    # X_test['Predicted'] = y_pred
+    X_test['Predicted'] = y_pred
     X_test['Original'] = y_test
-    # return jsonify(r2_score(y_test, y_pred))
+    SCORE = jsonify(r2_score(y_test, y_pred))
     
-    params = request.args
-    params_non_flat = params.to_dict(flat=False)
-    temp = {k: v for k, v in params_non_flat.items()}
-    print(type(temp))
-    # end=None
-    start = int(params["start"])
-    if 'end' in temp:
-        end = int(params["end"])
-    else:
-        end = None
+    
+    ##### HANDLE PARAMS #####
+    start,end = get_params(request.args)
     X_test = X_test[start:end][['Original','Predicted']]
+    
+    ##### Output #####
     return X_test.to_json(orient='index')
 
 
