@@ -1,7 +1,6 @@
 from flask import Flask, render_template, url_for
 from flask import request,redirect
 from flask import jsonify, make_response
-
 from sklearn.datasets import make_blobs
 import pandas as pd
 from sklearn import linear_model
@@ -24,53 +23,67 @@ def get_params(params):
     temp = {k: getMultipleValues(v) for k, v in params_non_flat.items()}
     end = int(params["end"]) if 'end' in temp else None
     start = int(params["start"]) if 'start' in temp else None
-    type_of_algo = params["algorithm"] if 'start' in temp else "linear"
-    return start,end,type_of_algo
+    type_of_algo = params["algorithm"] if 'algorithm' in temp else "linearRegression"
+    return [start, end,type_of_algo]
 
-@app.route('/selectAlgorithm')
+@app.route('/')
 def selectAlgorithm():
-    start,end, type_of_algo = get_params(request.args)    
-    if type_of_algo=="linear":
-        return redirect(url_for('linearRegression'))
-    elif type_of_algo=="logisticRegression":
-        return redirect(url_for('logisticRegression'))
+    params = get_params(request.args)    
+    if params[2]=="linearRegression":
+        return redirect(url_for('linear',start=params[0],end=params[1]))
+
+    elif params[2]=="logisticRegression":
+        return redirect(url_for('logistic',start=params[0],end=params[1]))
 
 @app.route('/linearRegression')
-def linear(start,end,type_of_algo):
+def linear():
     X,y = createData()
+    params = get_params(request.args)    
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)
     model = linear_model.LinearRegression()
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
-    y_pred = pd.DataFrame(y_pred)
-    X_test['Predicted'] = y_pred
-    X_test['Original'] = y_test
+    
+    predicted = pd.DataFrame(y_pred,columns=['predicted'])
+    y_test = y_test.rename(columns={0:"Original"})
 
-
-    X_test = X_test[start:end][['Original','Predicted']]
-    return X_test.to_json(orient="index")
+    df1 = pd.concat([y_test.reset_index(drop='True'),predicted.reset_index(drop='True')],axis=1)
+    df2 = pd.concat([X_test.reset_index(drop='True'),df1.reset_index(drop='True')],axis=1)
+    
+    ##### HANDLE PARAMS #####
+    df2 = df2[params[0]:params[1]]
+    
+    ##### Output #####
+    print("linear")
+    print(r2_score(y_test,predicted))
+    return df2.to_json(orient="index")
 
 
 @app.route('/logisticRegression')
 def logistic():
     X,y = createData()
+    params = get_params(request.args)   
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)
     model = linear_model.LogisticRegression(random_state=0)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
-    y_pred = pd.DataFrame(y_pred)
-    X_test['Predicted'] = y_pred
-    X_test['Original'] = y_test
-    # SCORE = jsonify(r2_score(y_test, y_pred))
     
+    predicted = pd.DataFrame(y_pred,columns=['predicted'])
     
+    # temp = pd.DataFrame(y_test,columns=['og'])
+    y_test = y_test.rename(columns={0:"Original"})
+
+    df1 = pd.concat([y_test.reset_index(drop='True'),predicted.reset_index(drop='True')],axis=1)
+    df2 = pd.concat([X_test.reset_index(drop='True'),df1.reset_index(drop='True')],axis=1)
+    
+    start, end = params[0], params[1]
     ##### HANDLE PARAMS #####
-    start, end, type_of_algo = get_params(request.args)
-    X_test = X_test[start:end][['Original','Predicted']]
-    
+    df2 = df2[start:end]
     
     ##### Output #####
-    return X_test.to_json(orient='index')
+    print("logistic")
+    print(r2_score(y_test,predicted))
+    return df2.to_json(orient='index')
 
 
 if __name__ =='__main__':
