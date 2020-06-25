@@ -9,11 +9,12 @@ app.register_blueprint(regression, url_prefix="/regression")
 
 @app.route('/<learning>')
 def selectAlgorithm(learning):
-    data_params = get_params(request.args)
     if learning == "regression":
         return redirect(url_for('regression.home'))
     elif learning == "classification":
-        return redirect(url_for('classification.home',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4]))
+        return redirect(url_for('classification.home'))
 
 if __name__ =='__main__':
     app.run(debug=True)
+
+#,start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4])
