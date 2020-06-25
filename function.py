@@ -22,7 +22,9 @@ def get_params(params):
     kernel = str(params['kernel']) if 'kernel' in temp else "linear"
     max_depth = int(params['max_depth']) if 'max_depth' in temp else None
     n_estimators = int(params['n_estimators']) if 'n_estimators' in temp else 50
-    return [start, end, no_of_rows, no_of_columns, clust, knear, kernel,max_depth,n_estimators]
+    alpha = int(params['alpha']) if 'alpha' in temp else 4
+    degree = int(params['degree']) if 'degree' in temp else 50
+    return [start, end, no_of_rows, no_of_columns, clust, knear, kernel,max_depth,n_estimators,degree,alpha]
 
 def get_algo(params):
     params_non_flat = params.to_dict(flat=False)
