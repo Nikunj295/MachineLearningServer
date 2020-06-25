@@ -26,13 +26,13 @@ def home():
     elif params == "knear":
         return redirect(url_for('.knear',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], knear=data_params[5]))
     elif params == "svm":
-        return redirect(url_for('.svm',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], knear=data_params[5]))
+        return redirect(url_for('.svm',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], kernel=data_params[6]))
     elif params == "naive":
-        return redirect(url_for('.naive',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], knear=data_params[5]))
+        return redirect(url_for('.naive',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4]))
     elif params == "dtree":
-        return redirect(url_for('.dtree',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], knear=data_params[5]))
+        return redirect(url_for('.dtree',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], max_depth=data_params[7]))
     elif params == "rtree":
-        return redirect(url_for('.rtree',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], knear=data_params[5]))
+        return redirect(url_for('.rtree',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], n_estimators=data_params[8]))
     else:
         return "select algo"
 
@@ -81,7 +81,9 @@ def svm():
     X,y = createData(params[2],params[3],params[4])   
     start, end = params[0], params[1]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)
-    clf = SVC(kernel='linear') 
+
+    clf = SVC(kernel=params[6]) 
+    
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test) 
     y_pred = pd.DataFrame(y_pred)
@@ -121,7 +123,7 @@ def dtree():
     X,y = createData(params[2],params[3],params[4])   
     start, end = params[0], params[1]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)
-    clf = DecisionTreeClassifier()
+    clf = DecisionTreeClassifier(max_depth= params[7])
     clf = clf.fit(X_train,y_train)
     y_pred = clf.predict(X_test)
     y_pred = pd.DataFrame(y_pred)
@@ -133,7 +135,6 @@ def dtree():
     df2 = df2[start:end]
     ##### Output #####
     print("DTREE")
-    print(accuracy_score(y_test,y_pred))
     return df2.to_json(orient='index')
 
 @classification.route("/rtree")
@@ -142,7 +143,7 @@ def rtree():
     X,y = createData(params[2],params[3],params[4])   
     start, end = params[0], params[1]
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)
-    clf=RandomForestClassifier(n_estimators=100)
+    clf=RandomForestClassifier(n_estimators=params[8])
     clf.fit(X_train,np.ravel(y_train))
     y_pred=clf.predict(X_test)
     y_pred = pd.DataFrame(y_pred)
@@ -154,6 +155,5 @@ def rtree():
     df2 = df2[start:end]
     ##### Output #####
     print("RTREE")
-    print(accuracy_score(y_test,y_pred))
     return df2.to_json(orient='index')
 

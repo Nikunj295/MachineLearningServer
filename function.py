@@ -19,7 +19,10 @@ def get_params(params):
     clust = int(params["clust"]) if 'clust' in temp else 2
     no_of_columns = int(params["cols"]) if 'cols' in temp else 2
     knear = int(params["knear"]) if 'knear' in temp else 5
-    return [start, end, no_of_rows, no_of_columns, clust, knear]
+    kernel = str(params['kernel']) if 'kernel' in temp else "linear"
+    max_depth = int(params['max_depth']) if 'max_depth' in temp else None
+    n_estimators = int(params['n_estimators']) if 'n_estimators' in temp else 50
+    return [start, end, no_of_rows, no_of_columns, clust, knear, kernel,max_depth,n_estimators]
 
 def get_algo(params):
     params_non_flat = params.to_dict(flat=False)
