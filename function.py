@@ -2,10 +2,11 @@ from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_regression
 import pandas as pd
+import random
 
 
-def createData(no_of_rows,no_of_columns,clust):
-    X, y = make_blobs(n_samples=no_of_rows, centers=clust, n_features=no_of_columns,cluster_std=0.5,random_state=10)
+def createData(no_of_rows, no_of_columns, clust):
+    X, y = make_blobs(n_samples=no_of_rows, centers=clust, n_features=no_of_columns,cluster_std=0.5,random_state=random.randint(0,5000))
     X=pd.DataFrame(X)
     y=pd.DataFrame(y)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)
