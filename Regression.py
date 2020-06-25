@@ -1,8 +1,7 @@
 from flask import Blueprint,request,redirect,url_for
-from function import createData,get_algo, get_params
+from function import createData,get_algo, get_params, result, regressionData
 from sklearn import linear_model
-from sklearn.preprocessing import PolynomialFeatures 
-from sklearn.linear_model import Ridge
+from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split    
 import pandas as pd
 
@@ -26,81 +25,54 @@ def home():
 @regression.route('/linearRegression')
 def linear():
     params = get_params(request.args)    
-    X,y = createData(params[2],params[3],params[4])
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)
+    X_train, X_test, y_train, y_test = regressionData(params[2],params[3])
+    start, end = params[0], params[1]
     model = linear_model.LinearRegression()
     model.fit(X_train, y_train)
-    start, end = params[0], params[1]
     y_pred = model.predict(X_test)
-    y_pred = pd.DataFrame(y_pred)
-    y_test = y_test.rename(columns={0:"Original"})
-    y_pred = y_pred.rename(columns={0:"Predicted"})
-    df1 = pd.concat([y_test.reset_index(drop='True'),y_pred.reset_index(drop='True')],axis=1)
-    df2 = pd.concat([X_test.reset_index(drop='True'),df1.reset_index(drop='True')],axis=1)
-    ##### HANDLE PARAMS #####
-    df2 = df2[start:end]
-    ##### Output #####
+    res = result(X_test, y_test, y_pred)
+    res = res[start:end]
     print("linear")
-    return df2.to_json(orient='index')
+    return res.to_json(orient='index')
 
 @regression.route("/logisticRegression")
 def logistic():
-    params = get_params(request.args)
-    X,y = createData(params[2],params[3],params[4])   
+    params = get_params(request.args)   
     start, end = params[0], params[1]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)   
+    X_train, X_test, y_train, y_test = createData(params[2],params[3],params[4])
     model = linear_model.LogisticRegression(random_state=0)
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
-    predicted = pd.DataFrame(y_pred,columns=['Predicted'])
-    y_test = y_test.rename(columns={0:"Original"})
-    df1 = pd.concat([y_test.reset_index(drop='True'),predicted.reset_index(drop='True')],axis=1)
-    df2 = pd.concat([X_test.reset_index(drop='True'),df1.reset_index(drop='True')],axis=1)
-    ##### HANDLE PARAMS #####
-    df2 = df2[start:end]
-    ##### Output #####
-    print("LOGISTIC")
-    return df2.to_json(orient='index')
+    res = result(X_test, y_test, y_pred)
+    res = res[start:end]
+    print("log")
+    return res.to_json(orient='index')
 
 @regression.route("/poly")
 def poly():
     params = get_params(request.args)
-    X,y = createData(params[2],params[3],params[4])   
     start, end = params[0], params[1]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)   
+    X_train, X_test, y_train, y_test = regressionData(params[2],params[3])
     poly = PolynomialFeatures(degree = params[9]) 
     X_poly = poly.fit_transform(X_train) 
     poly.fit(X_poly, y_train) 
     lin2 = linear_model.LinearRegression() 
     lin2.fit(X_poly, y_train)
     y_pred = lin2.predict(poly.fit_transform(X_test)) 
-    predicted = pd.DataFrame(y_pred,columns=['Predicted'])
-    y_test = y_test.rename(columns={0:"Original"})
-    df1 = pd.concat([y_test.reset_index(drop='True'),predicted.reset_index(drop='True')],axis=1)
-    df2 = pd.concat([X_test.reset_index(drop='True'),df1.reset_index(drop='True')],axis=1)
-    ##### HANDLE PARAMS #####
-    df2 = df2[start:end]
-    ##### Output #####
-    print("POLY")
-    print(request.args)
-    return df2.to_json(orient='index')
+    res = result(X_test, y_test, y_pred)
+    res = res[start:end]
+    print("poly")
+    return res.to_json(orient='index')
 
 @regression.route("/ridge")
 def ridge():
     params = get_params(request.args)
-    X,y = createData(params[2],params[3],params[4])   
     start, end = params[0], params[1]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=0)   
-    ridgereg = Ridge(alpha=params[10],normalize=True)
+    X_train, X_test, y_train, y_test = regressionData(params[2],params[3])
+    ridgereg = linear_model.Ridge(alpha=params[10],normalize=True)
     ridgereg.fit(X_train,y_train)
     y_pred = ridgereg.predict(X_test)
-    y_pred = pd.DataFrame(y_pred)
-    y_test = y_test.rename(columns={0:"Original"})
-    y_pred = y_pred.rename(columns={0:"Predicted"})
-    df1 = pd.concat([y_test.reset_index(drop='True'),y_pred.reset_index(drop='True')],axis=1)
-    df2 = pd.concat([X_test.reset_index(drop='True'),df1.reset_index(drop='True')],axis=1)
-    ##### HANDLE PARAMS #####
-    df2 = df2[start:end]
-    ##### Output #####
+    res = result(X_test, y_test, y_pred)
+    res = res[start:end]
     print("ridge")
-    return df2.to_json(orient='index')
+    return res.to_json(orient='index')
