@@ -21,6 +21,8 @@ def home():
     #     return redirect(url_for('.poly',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4],degree=data_params[9]))
     elif params == "ridge":
         return redirect(url_for('.ridge',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4],alpha=data_params[10]))
+    else:
+        return "select algo"
 
 @regression.route('/linearRegression')
 def linear():
