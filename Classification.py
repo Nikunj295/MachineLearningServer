@@ -9,11 +9,13 @@ from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
+from flask_cors import CORS
     
 import pandas as pd
 import numpy as np
 
 classification = Blueprint('classification', __name__)
+CORS(classification)
 
 @classification.route("/")
 def home():

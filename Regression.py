@@ -4,8 +4,10 @@ from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split    
 import pandas as pd
+from flask_cors import CORS
 
 regression = Blueprint('regression', __name__)
+CORS(regression)
 
 @regression.route("/")
 def home():
