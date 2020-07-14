@@ -19,5 +19,3 @@ def selectAlgorithm(learning):
 
 if __name__ =='__main__':
     app.run(debug=True)
-
-#,start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4])
