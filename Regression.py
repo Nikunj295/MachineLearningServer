@@ -34,7 +34,6 @@ def linear():
     y_pred = model.predict(X_test)
     res = result(X_test, y_test, y_pred)
     res = res[start:end]
-    print(model.singular_)
     return res.to_json(orient='index')
 
 @regression.route("/logisticRegression")
@@ -75,9 +74,13 @@ def fetchData(name):
     if name == "california_housing":
         data = datasets.fetch_california_housing()
         df =  sklearn_to_df(data)
-        return df.to_json(orient="index")
+        desc = df.describe()
+        desc = desc.reset_index()
+        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
+
     if name == "diabates":
         data = datasets.load_diabetes()
         df =  sklearn_to_df(data)
-        return df.to_json(orient="index")
-     
+        desc = df.describe()
+        desc = desc.reset_index()
+        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
