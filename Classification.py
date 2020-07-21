@@ -11,6 +11,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from flask_cors import CORS
 from sklearn import datasets
+from sklearn.feature_selection import RFE
 
 import json
 import pandas as pd
@@ -18,6 +19,8 @@ import numpy as np
 
 classification = Blueprint('classification', __name__)
 CORS(classification)
+print("running")
+
 
 @classification.route("/")
 def home():
@@ -128,22 +131,31 @@ def sklearn_to_df(sklearn_dataset):
     df['target'] = pd.Series(sklearn_dataset.target)
     return df
 
+
+iris_data = datasets.load_iris()
+df = sklearn_to_df(iris_data)
+
 @classification.route("/fetchData/<name>",methods=['GET','POST'])
 def fetchData(name):
-    if name == "iris":
-        iris_data = datasets.load_iris()
+    global df
+    mode_type = request.args.get("type") 
+    col = request.args.get("col") 
+
+    if name == "iris" and mode_type == "fetchData":
         df = sklearn_to_df(iris_data)
-        df['species'] = pd.Categorical.from_codes(iris_data.target, iris_data.target_names)
         desc = df.describe()
-        desc = desc.reset_index()
-        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
+        desc = desc.reset_index()    
+        return json.dumps( [ 
+                            json.loads(df.to_json(orient="index")),
+                            json.loads(desc.to_json(orient="index")),
+                        ] )
 
     elif name == "boston":
         boston_data = datasets.load_boston()
         df = sklearn_to_df(boston_data)
         desc = df.describe()
         desc = desc.reset_index()
-        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
+        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index"))] )
 
     elif name == "digits":
         digits_data = datasets.load_digits()
@@ -159,11 +171,25 @@ def fetchData(name):
         desc = desc.reset_index()
         return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
 
-    elif name == "wine":
+    elif name == "wine" and mode_type == "fetchData":
         wine_data = datasets.load_wine()
         df = sklearn_to_df(wine_data)
         desc = df.describe()
         desc = desc.reset_index()
         return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
 
-    
+    elif mode_type == "splitData" :
+        #get the data from frontend 
+        x = request.args.get("col")
+        temp = json.loads(x)
+        columns = temp.get('col')
+        data = temp.get('data')
+
+        h = pd.DataFrame(data)
+        X = h[:][columns] 
+        y = h[:]['target']
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+        df1 = pd.concat([X_train.reset_index(drop='True'),y_train.reset_index(drop='True')],axis=1)
+        df2 = pd.concat([X_test.reset_index(drop='True'),y_test.reset_index(drop='True')],axis=1)
+        return json.dumps( [json.loads(df1.to_json(orient="index")), json.loads(df2.to_json(orient="index")) ] )

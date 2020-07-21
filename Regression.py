@@ -5,7 +5,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split    
 import pandas as pd
 from flask_cors import CORS
-
+import json
 regression = Blueprint('regression', __name__)
 CORS(regression)
 
