@@ -1,5 +1,6 @@
 /venv
-/client
+/client/node_modules
 /__pycache__
 test.py
 test1.py
+test3.py

@@ -1,4 +1,4 @@
-from flask import Blueprint,request,redirect,url_for
+from flask import Blueprint,request,redirect,url_for, jsonify
 from function import createData, get_params, get_algo,result
 from sklearn import linear_model
 from sklearn.model_selection import train_test_split    
@@ -9,16 +9,23 @@ from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-    
+from flask_cors import CORS
+from sklearn import datasets
+from sklearn.feature_selection import RFE
+
+import json
 import pandas as pd
 import numpy as np
 
 classification = Blueprint('classification', __name__)
+CORS(classification)
+print("running")
+
 
 @classification.route("/")
 def home():
     params = get_algo(request.args)
-    if params is None:
+    if params is None or "":
         params = "logisticRegression"
     data_params = get_params(request.args)
     if params == "logisticRegression":
@@ -33,20 +40,19 @@ def home():
         return redirect(url_for('.dtree',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], max_depth=data_params[7]))
     elif params == "rtree":
         return redirect(url_for('.rtree',start=data_params[0],end=data_params[1], rows=data_params[2], cols=data_params[3], clust=data_params[4], n_estimators=data_params[8]))
-    else:
-        return "select algo"
-
+    
 @classification.route("/logisticRegression")
 def logistic():
     params = get_params(request.args)
     X_train, X_test, y_train, y_test = createData(params[2],params[3],params[4])
     start, end = params[0], params[1]
     model = linear_model.LogisticRegression(random_state=0)
-    model.fit(X_train, y_train)
+    model.fit(X_train, np.ravel(y_train))
     y_pred = model.predict(X_test)
     res = result(X_test, y_test, y_pred)
     res = res[start:end]
     print("log")
+    print(params)
     return res.to_json(orient='index')
 
 @classification.route("/knear")
@@ -55,11 +61,13 @@ def knear():
     X_train, X_test, y_train, y_test = createData(params[2],params[3],params[4])
     start, end = params[0], params[1]
     classifier = KNeighborsClassifier(n_neighbors=params[5])
-    classifier.fit(X_train, y_train)
+    classifier.fit(X_train, np.ravel(y_train))
     y_pred = classifier.predict(X_test)
     res = result(X_test, y_test, y_pred)
     res = res[start:end]
     print("knear")
+    
+    print(params)
     return res.to_json(orient='index')
 
 @classification.route("/svm")
@@ -68,11 +76,12 @@ def svm():
     X_train, X_test, y_train, y_test = createData(params[2],params[3],params[4])
     start, end = params[0], params[1]
     clf = SVC(kernel=params[6]) 
-    clf.fit(X_train, y_train)
+    clf.fit(X_train, np.ravel(y_train))
     y_pred = clf.predict(X_test) 
     res = result(X_test, y_test, y_pred)
     res = res[start:end]
     print("svm")
+    print(params)
     return res.to_json(orient='index')
 
 @classification.route("/naive")
@@ -81,11 +90,12 @@ def naive():
     X_train, X_test, y_train, y_test = createData(params[2],params[3],params[4])
     start, end = params[0], params[1]
     model = GaussianNB()
-    model.fit(X_train,y_train)
+    model.fit(X_train,np.ravel(y_train))
     y_pred = model.predict(X_test)
     res = result(X_test, y_test, y_pred)
     res = res[start:end]
     print("naive")
+    print(params)
     return res.to_json(orient='index')
 
 @classification.route("/dtree")
@@ -94,11 +104,12 @@ def dtree():
     X_train, X_test, y_train, y_test = createData(params[2],params[3],params[4])
     start, end = params[0], params[1]
     clf = DecisionTreeClassifier(max_depth= params[7])
-    clf = clf.fit(X_train,y_train)
+    clf = clf.fit(X_train,np.ravel(y_train))
     y_pred = clf.predict(X_test)
     res = result(X_test, y_test, y_pred)
     res = res[start:end]
     print("dtree")
+    print(params)
     return res.to_json(orient='index')
 
 @classification.route("/rtree")
@@ -112,4 +123,73 @@ def rtree():
     res = result(X_test, y_test, y_pred)
     res = res[start:end]
     print("rtree")
+    print(params)
     return res.to_json(orient='index')
+
+def sklearn_to_df(sklearn_dataset):
+    df = pd.DataFrame(sklearn_dataset.data, columns=sklearn_dataset.feature_names)
+    df['target'] = pd.Series(sklearn_dataset.target)
+    return df
+
+
+iris_data = datasets.load_iris()
+df = sklearn_to_df(iris_data)
+
+@classification.route("/fetchData/<name>",methods=['GET','POST'])
+def fetchData(name):
+    global df
+    mode_type = request.args.get("type") 
+    col = request.args.get("col") 
+
+    if name == "iris" and mode_type == "fetchData":
+        df = sklearn_to_df(iris_data)
+        desc = df.describe()
+        desc = desc.reset_index()    
+        return json.dumps( [ 
+                            json.loads(df.to_json(orient="index")),
+                            json.loads(desc.to_json(orient="index")),
+                        ] )
+
+    elif name == "boston":
+        boston_data = datasets.load_boston()
+        df = sklearn_to_df(boston_data)
+        desc = df.describe()
+        desc = desc.reset_index()
+        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index"))] )
+
+    elif name == "digits":
+        digits_data = datasets.load_digits()
+        df = sklearn_to_df(digits_data)
+        desc = df.describe()
+        desc = desc.reset_index()
+        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
+
+    elif name == "breast":
+        breast_cancer_data = datasets.load_breast_cancer()
+        df = sklearn_to_df(breast_cancer_data)
+        desc = df.describe()
+        desc = desc.reset_index()
+        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
+
+    elif name == "wine" and mode_type == "fetchData":
+        wine_data = datasets.load_wine()
+        df = sklearn_to_df(wine_data)
+        desc = df.describe()
+        desc = desc.reset_index()
+        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
+
+    elif mode_type == "splitData" :
+        #get the data from frontend 
+        x = request.args.get("col")
+        temp = json.loads(x)
+        columns = temp.get('col')
+        data = temp.get('data')
+
+        h = pd.DataFrame(data)
+        X = h[:][columns] 
+        y = h[:]['target']
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+        df1 = pd.concat([X_train.reset_index(drop='True'),y_train.reset_index(drop='True')],axis=1)
+        df2 = pd.concat([X_test.reset_index(drop='True'),y_test.reset_index(drop='True')],axis=1)
+        return json.dumps( [json.loads(df1.to_json(orient="index")), json.loads(df2.to_json(orient="index")) ] )
