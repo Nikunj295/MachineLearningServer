@@ -12,6 +12,8 @@ from sklearn.ensemble import RandomForestClassifier
 from flask_cors import CORS
 from sklearn import datasets
 from sklearn.feature_selection import RFE
+from pymongo import MongoClient
+import datetime
 
 import json
 import pandas as pd
@@ -19,7 +21,8 @@ import numpy as np
 
 classification = Blueprint('classification', __name__)
 CORS(classification)
-print("running")
+
+client1 = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/Predefine?retryWrites=true&w=majority')
 
 
 @classification.route("/")
@@ -132,64 +135,86 @@ def sklearn_to_df(sklearn_dataset):
     return df
 
 
-iris_data = datasets.load_iris()
-df = sklearn_to_df(iris_data)
-
 @classification.route("/fetchData/<name>",methods=['GET','POST'])
 def fetchData(name):
-    global df
-    mode_type = request.args.get("type") 
-    col = request.args.get("col") 
-
-    if name == "iris" and mode_type == "fetchData":
-        df = sklearn_to_df(iris_data)
-        desc = df.describe()
-        desc = desc.reset_index()    
-        return json.dumps( [ 
-                            json.loads(df.to_json(orient="index")),
-                            json.loads(desc.to_json(orient="index")),
-                        ] )
+    db = client1['Predefine']
+    if name == "iris":
+        collection = db['iris']
+        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
+        desc = df1.describe().reset_index()
+        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
 
     elif name == "boston":
-        boston_data = datasets.load_boston()
-        df = sklearn_to_df(boston_data)
-        desc = df.describe()
-        desc = desc.reset_index()
-        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index"))] )
+        collection = db['boston']
+        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
+        desc = df1.describe().reset_index()
+        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
 
     elif name == "digits":
-        digits_data = datasets.load_digits()
-        df = sklearn_to_df(digits_data)
-        desc = df.describe()
-        desc = desc.reset_index()
-        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
+        collection = db['digits']
+        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
+        desc = df1.describe().reset_index()
+        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
 
     elif name == "breast":
-        breast_cancer_data = datasets.load_breast_cancer()
-        df = sklearn_to_df(breast_cancer_data)
-        desc = df.describe()
-        desc = desc.reset_index()
-        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
+        collection = db['breast']
+        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
+        desc = df1.describe().reset_index()
+        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
 
-    elif name == "wine" and mode_type == "fetchData":
-        wine_data = datasets.load_wine()
-        df = sklearn_to_df(wine_data)
-        desc = df.describe()
-        desc = desc.reset_index()
-        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
+    elif name == "wine":
+        collection = db['wine']
+        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
+        desc = df1.describe().reset_index()
+        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
 
-    elif mode_type == "splitData" :
-        #get the data from frontend 
-        x = request.args.get("col")
-        temp = json.loads(x)
-        columns = temp.get('col')
-        data = temp.get('data')
+    # elif mode_type == "splitData":
+    #     x = request.args.get("col")
+    #     temp = json.loads(x)
+    #     columns = temp.get('col')
+    #     data = temp.get('data')
 
-        h = pd.DataFrame(data)
-        X = h[:][columns] 
-        y = h[:]['target']
+    #     h = pd.DataFrame(data)
+    #     X = h[:][columns] 
+    #     y = h[:]['target']
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-        df1 = pd.concat([X_train.reset_index(drop='True'),y_train.reset_index(drop='True')],axis=1)
-        df2 = pd.concat([X_test.reset_index(drop='True'),y_test.reset_index(drop='True')],axis=1)
-        return json.dumps( [json.loads(df1.to_json(orient="index")), json.loads(df2.to_json(orient="index")) ] )
+    #     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    #     df1 = pd.concat([X_train.reset_index(drop='True'),y_train.reset_index(drop='True')],axis=1)
+    #     df2 = pd.concat([X_test.reset_index(drop='True'),y_test.reset_index(drop='True')],axis=1)
+    #     return json.dumps( [json.loads(df1.to_json(orient="index")), json.loads(df2.to_json(orient="index")) ] )
+
+
+@classification.route("/selection",methods=['GET','POST'])
+def selection():
+    db = client1['Predefine']
+    payload = request.args.get("payload")
+    dc = json.loads(payload)
+    userId = dc.get('id')
+    method = dc.get('method')
+    column = dc.get('item')
+    dataSet = dc.get('dataset')
+    collection = db[dataSet]
+
+    df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False}))) 
+    X = df1[:][column]
+    y = df1[:]['target']
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    train = pd.concat([X_train.reset_index(drop='True'),y_train.reset_index(drop='True')],axis=1)
+    test = pd.concat([X_test.reset_index(drop='True'),y_test.reset_index(drop='True')],axis=1)     
+    train = train.to_dict('records')
+    test = test.to_dict('records')
+
+    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
+    db = client['User']
+    collection = db['Data']
+    
+    # data_dict = df1.to_dict("records")
+    collection.update({'_id':userId}, { "_id": userId, method:{ dataSet : { 'train' : train , 'test' : test , 'model' : "" } },'createdAt':datetime.datetime.utcnow()})
+    # collection.update({'_id':userId}, {"index":"Sensex","data":data_dict})
+
+    column.append('target')
+    df1 = df1[:][column]   
+    
+    return df1.to_json(orient="index")
+
