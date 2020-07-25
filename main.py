@@ -16,10 +16,9 @@ db = client['User']
 @app.route("/addId",methods=['GET','POST'])
 def addId():
     ID = request.args.get("id")
-    method = request.args.get("method")
     collection = db['Data']
     algo = "iris"
-    mydict = { "_id": ID, method:{ algo :{'X':"",'y':"","model":""}},'createdAt':datetime.datetime.utcnow()}
+    mydict = { "_id": ID, 'data': {'X':"",'y':"","model":""},'createdAt':datetime.datetime.utcnow()}
     collection.insert_one(mydict)
     return "Data Inserted"
 

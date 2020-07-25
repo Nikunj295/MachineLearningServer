@@ -13,8 +13,9 @@ from flask_cors import CORS
 from sklearn import datasets
 from sklearn.feature_selection import RFE
 from pymongo import MongoClient
-import datetime
 
+import datetime
+import pickle
 import json
 import pandas as pd
 import numpy as np
@@ -168,29 +169,12 @@ def fetchData(name):
         desc = df1.describe().reset_index()
         return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
 
-    # elif mode_type == "splitData":
-    #     x = request.args.get("col")
-    #     temp = json.loads(x)
-    #     columns = temp.get('col')
-    #     data = temp.get('data')
-
-    #     h = pd.DataFrame(data)
-    #     X = h[:][columns] 
-    #     y = h[:]['target']
-
-    #     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-    #     df1 = pd.concat([X_train.reset_index(drop='True'),y_train.reset_index(drop='True')],axis=1)
-    #     df2 = pd.concat([X_test.reset_index(drop='True'),y_test.reset_index(drop='True')],axis=1)
-    #     return json.dumps( [json.loads(df1.to_json(orient="index")), json.loads(df2.to_json(orient="index")) ] )
-
-
 @classification.route("/selection",methods=['GET','POST'])
 def selection():
     db = client1['Predefine']
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get('id')
-    method = dc.get('method')
     column = dc.get('item')
     dataSet = dc.get('dataset')
     collection = db[dataSet]
@@ -208,13 +192,71 @@ def selection():
     client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
-    
-    # data_dict = df1.to_dict("records")
-    collection.update({'_id':userId}, { "_id": userId, method:{ dataSet : { 'train' : train , 'test' : test , 'model' : "" } },'createdAt':datetime.datetime.utcnow()})
-    # collection.update({'_id':userId}, {"index":"Sensex","data":data_dict})
-
+    collection.update({'_id':userId}, { "_id": userId, 'data': { 'train' : train , 'test' : test , 'model' : "" } ,'createdAt': datetime.datetime.utcnow()})
     column.append('target')
-    df1 = df1[:][column]   
-    
+    df1 = df1[:][column]    
     return df1.to_json(orient="index")
 
+@classification.route("/splitData",methods=['GET','POST'])
+def splitData():
+    payload = request.args.get("payload")
+    dc = json.loads(payload)
+    userId = dc.get('id')
+    
+    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
+    db = client['User']
+    collection = db['Data']
+    temp = collection.find({'_id':userId})
+    array = list(temp)
+    train = pd.DataFrame(array[0]['data']['train']) 
+    test = pd.DataFrame(array[0]['data']['test']) 
+    return json.dumps( [json.loads(train.to_json(orient="index")),json.loads(test.to_json(orient="index")),] )
+
+@classification.route('/model',methods=['GET','POST'])
+def model():
+    payload = request.args.get("payload")
+    dc = json.loads(payload)
+    algorithm = dc.get("algorithm")
+    userId = dc.get("id")
+
+    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
+    db = client['User']
+    collection = db['Data']
+    data = list(collection.find({'_id':userId}))
+    train = pd.DataFrame(data[0]['data']['train'])
+    X_train = train[train.columns[:-1]]
+    y_train = train[train.columns[-1]]
+    if algorithm == "logisticRegression":
+        model = linear_model.LogisticRegression()
+        model.fit(X_train, np.ravel(y_train))
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+
+    return "From model"
+
+@classification.route('/predict',methods=['GET','POST'])
+def predicted():
+    
+    payload = request.args.get("payload")
+    dc = json.loads(payload)
+    userId = dc.get("id")
+    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
+    db = client['User']
+    collection = db['Data']
+    data = list(collection.find({'_id':userId}))
+    model = data[0]['data']['model']
+    test = pd.DataFrame(data[0]['data']['test']) 
+
+    X_test = test[test.columns[:-1]]
+    y_test = test[test.columns[-1]]
+    mdl = pickle.loads(model)
+    y_pred = mdl.predict(X_test)
+    y_pred = pd.DataFrame(y_pred)
+    y_pred.rename(columns = {0:'Predicted'}, inplace = True) 
+    
+    just = pd.concat([X_test.reset_index(drop='True'),y_pred.reset_index(drop='True')],axis=1)
+    
+    result = pd.concat([y_pred.reset_index(drop='True'),y_test.reset_index(drop='True')],axis=1)
+    
+    final = pd.concat([X_test.reset_index(drop='True'),result.reset_index(drop='True')],axis=1)
+    return json.dumps( [json.loads(just.to_json(orient="index")),json.loads(final.to_json(orient="index")),] )
