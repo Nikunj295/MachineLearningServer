@@ -18,7 +18,7 @@ def addId():
     ID = request.args.get("id")
     collection = db['Data']
     algo = "iris"
-    mydict = { "_id": ID, 'data': {'X':"",'y':"","model":""},'createdAt':datetime.datetime.utcnow()}
+    mydict = { "_id": ID, 'data': {'X':"",'y':"","model":"","result":"", "pred":"" },'createdAt':datetime.datetime.utcnow()}
     collection.insert_one(mydict)
     return "Data Inserted"
 

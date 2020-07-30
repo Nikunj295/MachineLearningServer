@@ -22,9 +22,7 @@ import numpy as np
 
 classification = Blueprint('classification', __name__)
 CORS(classification)
-
 client1 = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/Predefine?retryWrites=true&w=majority')
-
 
 @classification.route("/")
 def home():
@@ -135,39 +133,16 @@ def sklearn_to_df(sklearn_dataset):
     df['target'] = pd.Series(sklearn_dataset.target)
     return df
 
-
 @classification.route("/fetchData/<name>",methods=['GET','POST'])
 def fetchData(name):
     db = client1['Predefine']
-    if name == "iris":
-        collection = db['iris']
-        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
-        desc = df1.describe().reset_index()
-        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
-
-    elif name == "boston":
-        collection = db['boston']
-        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
-        desc = df1.describe().reset_index()
-        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
-
-    elif name == "digits":
-        collection = db['digits']
-        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
-        desc = df1.describe().reset_index()
-        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
-
-    elif name == "breast":
-        collection = db['breast']
-        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
-        desc = df1.describe().reset_index()
-        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
-
-    elif name == "wine":
-        collection = db['wine']
-        df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
-        desc = df1.describe().reset_index()
-        return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
+    collection = db[name]
+    df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
+    # if name=='iris':
+    #     iris = datasets.load_iris()
+    #     df1['target'] = pd.Categorical.from_codes(iris.target, iris.target_names)
+    desc = df1.describe().reset_index()
+    return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
 
 @classification.route("/selection",methods=['GET','POST'])
 def selection():
@@ -226,12 +201,49 @@ def model():
     train = pd.DataFrame(data[0]['data']['train'])
     X_train = train[train.columns[:-1]]
     y_train = train[train.columns[-1]]
+
     if algorithm == "logisticRegression":
         model = linear_model.LogisticRegression()
         model.fit(X_train, np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print('log')
+    
+    elif algorithm == "knear":
+        model = KNeighborsClassifier(n_neighbors=5)
+        model.fit(X_train, np.ravel(y_train))
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print("knear")
 
+    elif algorithm == "svm":
+        model = SVC(kernel='linear') 
+        model.fit(X_train, np.ravel(y_train))
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print("svm")
+
+    elif algorithm == "naive":
+        model = GaussianNB()
+        model.fit(X_train,np.ravel(y_train))
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print("naive")
+    
+    elif algorithm == "dtree":
+        model = DecisionTreeClassifier()
+        model.fit(X_train,np.ravel(y_train))
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print("dtree")
+    
+    elif algorithm == "rtree":
+        model=RandomForestClassifier(n_estimators=50)
+        model.fit(X_train,np.ravel(y_train))
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print('rtree')
+    
     return "From model"
 
 @classification.route('/predict',methods=['GET','POST'])
@@ -255,8 +267,11 @@ def predicted():
     y_pred.rename(columns = {0:'Predicted'}, inplace = True) 
     
     just = pd.concat([X_test.reset_index(drop='True'),y_pred.reset_index(drop='True')],axis=1)
-    
     result = pd.concat([y_pred.reset_index(drop='True'),y_test.reset_index(drop='True')],axis=1)
-    
     final = pd.concat([X_test.reset_index(drop='True'),result.reset_index(drop='True')],axis=1)
+    j = just.to_dict('records')
+    f = final.to_dict('records')
+    collection.update(  { '_id':userId} , { '$set': { 'data.result' : f  } } )
+    collection.update(  { '_id':userId} , { '$set': { 'data.pred' : j  } } )
+
     return json.dumps( [json.loads(just.to_json(orient="index")),json.loads(final.to_json(orient="index")),] )
