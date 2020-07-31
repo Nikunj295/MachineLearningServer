@@ -138,9 +138,6 @@ def fetchData(name):
     db = client1['Predefine']
     collection = db[name]
     df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
-    # if name=='iris':
-    #     iris = datasets.load_iris()
-    #     df1['target'] = pd.Categorical.from_codes(iris.target, iris.target_names)
     desc = df1.describe().reset_index()
     return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
 
@@ -216,13 +213,6 @@ def model():
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
         print("knear")
 
-    elif algorithm == "svm":
-        model = SVC(kernel='linear') 
-        model.fit(X_train, np.ravel(y_train))
-        pickled_model = pickle.dumps(model)
-        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print("svm")
-
     elif algorithm == "naive":
         model = GaussianNB()
         model.fit(X_train,np.ravel(y_train))
@@ -243,7 +233,38 @@ def model():
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
         print('rtree')
+
+    #both
+    elif algorithm == "svm":
+        model = SVC(kernel='linear') 
+        model.fit(X_train, np.ravel(y_train))
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print("svm")
+
+    # Regression Algorithm
+    elif algorithm == 'linearRegression':
+        model = linear_model.LinearRegression()
+        model.fit(X_train, y_train)
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print('linear')
+
+    elif algorithm == 'logisticRegression':
+        model = linear_model.LogisticRegression(random_state=0)
+        model.fit(X_train, y_train)
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print('logR')
     
+    elif algorithm == 'ridge':
+        model = linear_model.Ridge(normalize=True)
+        model.fit(X_train,y_train)
+        pickled_model = pickle.dumps(model)
+        collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
+        print('ridge')
+    
+
     return "From model"
 
 @classification.route('/predict',methods=['GET','POST'])

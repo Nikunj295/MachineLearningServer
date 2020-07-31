@@ -68,19 +68,3 @@ def sklearn_to_df(sklearn_dataset):
     df = pd.DataFrame(sklearn_dataset.data, columns=sklearn_dataset.feature_names)
     df['target'] = pd.Series(sklearn_dataset.target)
     return df
-
-@regression.route("/fetchData/<name>")
-def fetchData(name):
-    if name == "california_housing":
-        data = datasets.fetch_california_housing()
-        df =  sklearn_to_df(data)
-        desc = df.describe()
-        desc = desc.reset_index()
-        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
-
-    if name == "diabates":
-        data = datasets.load_diabetes()
-        df =  sklearn_to_df(data)
-        desc = df.describe()
-        desc = desc.reset_index()
-        return json.dumps( [json.loads(df.to_json(orient="index")),json.loads(desc.to_json(orient="index")) ] )
