@@ -66,6 +66,8 @@ def create():
     if ty == "classification":
         center_box = (0,500)
         X, y = datasets.make_blobs(n_samples=rows, centers=cluster, center_box=center_box, n_features=cols, cluster_std=10, random_state=random.randint(0,5000))
+    if ty == "regression":
+        X, y = datasets.make_regression(n_samples=rows, n_features=cols, noise=5)
     X = pd.DataFrame(X)
     y = pd.DataFrame(y)
     
