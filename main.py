@@ -5,7 +5,7 @@ from function import createData
 from flask_cors import CORS
 from pymongo import MongoClient
 import datetime
-
+from sklearn import tree
 from sklearn import linear_model
 from sklearn.model_selection import train_test_split    
 from sklearn.preprocessing import StandardScaler
@@ -20,12 +20,16 @@ from sklearn import datasets
 from sklearn.feature_selection import RFE
 from pymongo import MongoClient
 import random
+import base64
 import datetime
 import pickle
 import json
 import pandas as pd
 import numpy as np
-
+import matplotlib
+from matplotlib import pyplot as plt
+matplotlib.use('Agg')
+from io import BytesIO
 
 app = Flask(__name__)
 CORS(app)
@@ -93,6 +97,7 @@ def fetchData(name):
     desc = df1.describe().reset_index()
     return json.dumps( [json.loads(df1.to_json(orient="index")),json.loads(desc.to_json(orient="index")),] )
 
+
 @app.route('/create/selection',methods=['GET','POST'])
 def createSelection():
     payload = request.args.get("payload")
@@ -120,6 +125,20 @@ def createSelection():
     return df1.to_json(orient="index")
 
 
+# @app.route('/preprocess',methods=['GET','POST'])
+# def preprocess():
+#     db = client1['Predefine']
+#     payload = request.args.get("payload")
+#     dc = json.loads(payload)
+#     userId = dc.get('id')
+#     column = dc.get('item')
+#     dataSet = dc.get('dataset')
+#     collection = db[dataSet]
+#     df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False}))) 
+#     print(df1)
+#     return "preprocess"
+
+
 @app.route("/selection",methods=['GET','POST'])
 def selection():
     db = client1['Predefine']
@@ -142,7 +161,6 @@ def selection():
     client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
-    # collection.update({'_id':userId}, { "_id": userId, 'data': { 'train' : train , 'test' : test  } })
     collection.update({'_id':userId}, { '$set':{'data.train': train } })
     collection.update({'_id':userId}, { '$set':{'data.test': test } })
     column.append('target')
@@ -288,6 +306,33 @@ def visualize():
     result = pd.DataFrame(data[0]['data']['result']) 
     final = pd.DataFrame(data[0]['data']['pred']) 
     return json.dumps( [json.loads(final.to_json(orient="index")),json.loads(result.to_json(orient="index")),] )
+
+@app.route("/getTree",methods=['GET','POST'])
+def getTree():
+    payload = request.args.get("payload")
+    dc = json.loads(payload)
+    userId = dc.get('id')
+    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
+    db = client['User']
+    collection = db['Data']
+    data = list(collection.find({'_id':userId}))
+    model = data[0]['data']['model']
+    final = pd.DataFrame(data[0]['data']['pred']) 
+    mdl = pickle.loads(model)
+    fig = plt.figure(figsize=(20,20))
+    tar = final[final.columns[-1]].unique().tolist()
+    for i in range(len(tar)):
+        tar[i] = str(tar[i])
+
+    _ = tree.plot_tree(mdl, feature_names=final.columns,class_names=tar,filled=True)
+    figfile = BytesIO()
+    fig.savefig(figfile, format='png')
+    figfile.seek(0)
+    figdata_png = base64.b64encode(figfile.getvalue())
+    figdata_png.decode("utf-8") 
+    print(type(figdata_png))
+    return figdata_png
+    
 
 if __name__ =='__main__':
     app.run(debug=True)
