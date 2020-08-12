@@ -333,6 +333,27 @@ def getTree():
     print(type(figdata_png))
     return figdata_png
     
+@app.route("/boxplot",methods=['GET','POST'])
+def boxplot():
+    payload = request.args.get("payload")
+    dc = json.loads(payload)
+    userId = dc.get('id')
+    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
+    db = client['User']
+    collection = db['Data']
+    data = list(collection.find({'_id':userId}))
+    final = pd.DataFrame(data[0]['data']['result']) 
+
+    li = []
+    for i in final.columns:
+        q2 = np.quantile(final[i], .50)
+        q1 = np.quantile(final[i], .25)
+        q3 = np.quantile(final[i], .75)
+        mx = max(final[i])
+        mn = min(final[i])
+        li.append({"label":i,"y":[mn,q1,q3,mx,q2]})
+    return json.dumps({"list":li})
+
 
 if __name__ =='__main__':
     app.run(debug=True)
