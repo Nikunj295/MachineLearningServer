@@ -354,6 +354,19 @@ def boxplot():
         li.append({"label":i,"y":[mn,q1,q3,mx,q2]})
     return json.dumps({"list":li})
 
+@app.route("/corr",methods=['GET','POST'])
+def corr():
+    payload = request.args.get("payload")
+    dc = json.loads(payload)
+    userId = dc.get('id')
+    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
+    db = client['User']
+    collection = db['Data']
+    data = list(collection.find({'_id':userId}))
+    final = pd.DataFrame(data[0]['data']['result'])
+    final = final.round(2)
+    x = final.corr(method="pearson").reset_index() 
+    return x.to_json(orient="index")
 
 if __name__ =='__main__':
     app.run(debug=True)
