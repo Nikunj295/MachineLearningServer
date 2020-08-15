@@ -49,13 +49,6 @@ def addId():
     collection.insert_one(mydict)
     return "Data Inserted"
 
-# @app.route('/<learning>')
-# def selectAlgorithm(learning):
-#     if learning == "regression":
-#         return redirect(url_for('regression.home'))
-#     elif learning == "classification":
-#         return redirect(url_for('classification.home'))
-
 @app.route("/create",methods=['GET','POST'])
 def create():
     payload = request.args.get("payload")
@@ -80,7 +73,11 @@ def create():
     
     y = y.rename({0:'target'},axis=1)
     df1 = pd.concat([X.reset_index(drop='True'),y.reset_index(drop='True')],axis=1)
-    desc = df1.describe()
+    desc = df1.describe().reset_index()
+    col_name="index"
+    first_col = desc.pop(col_name)
+    desc.insert(0, col_name, first_col)
+    print(desc)
     client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
@@ -92,6 +89,7 @@ def create():
 @app.route("/fetchData/<name>",methods=['GET','POST'])
 def fetchData(name):
     db = client1['Predefine']
+    print("===================="+str(name))
     collection = db[name]
     df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
     desc = df1.describe().reset_index()
@@ -123,20 +121,6 @@ def createSelection():
     column.append('target')
     df1 = df1[:][column]    
     return df1.to_json(orient="index")
-
-
-# @app.route('/preprocess',methods=['GET','POST'])
-# def preprocess():
-#     db = client1['Predefine']
-#     payload = request.args.get("payload")
-#     dc = json.loads(payload)
-#     userId = dc.get('id')
-#     column = dc.get('item')
-#     dataSet = dc.get('dataset')
-#     collection = db[dataSet]
-#     df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False}))) 
-#     print(df1)
-#     return "preprocess"
 
 
 @app.route("/selection",methods=['GET','POST'])
