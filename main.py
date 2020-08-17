@@ -348,8 +348,7 @@ def corr():
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
     final = pd.DataFrame(data[0]['data']['result'])
-    final = final.round(2)
-    x = final.corr(method="pearson").reset_index() 
+    x = final.corr(method="pearson").reset_index().round(3) 
     return x.to_json(orient="index")
 
 if __name__ =='__main__':
