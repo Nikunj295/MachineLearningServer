@@ -33,8 +33,10 @@ from io import BytesIO
 
 app = Flask(__name__)
 CORS(app)
-app.register_blueprint(classification, url_prefix="/classification")
-app.register_blueprint(regression, url_prefix="/regression")
+# app.register_blueprint(classification, url_prefix="/classification")
+# app.register_blueprint(regression, url_prefix="/regression")
+
+# app.config.from_pyfile('config.py')
 
 client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')
 client1 = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/Predefine?retryWrites=true&w=majority')
@@ -45,8 +47,11 @@ def addId():
     db = client['User']
     ID = request.args.get("id")
     collection = db['Data']
-    mydict = { "_id": ID, 'data': {'X':"",'y':"","model":"","result":"", "pred":"","train":"",'test':"",'raw':''},'createdAt':datetime.datetime.utcnow()}
-    collection.insert_one(mydict)
+    if collection.find({'_id':ID}).count() > 0: 
+        pass
+    else:
+        mydict = { "_id": ID, 'data': {'X':"",'y':"","model":"","result":"", "pred":"","train":"",'test':"",'raw':''},'createdAt':datetime.datetime.utcnow()}
+        collection.insert_one(mydict)
     return "Data Inserted"
 
 @app.route("/create",methods=['GET','POST'])
@@ -77,8 +82,6 @@ def create():
     col_name="index"
     first_col = desc.pop(col_name)
     desc.insert(0, col_name, first_col)
-    print(desc)
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     raw = df1.to_dict('records')
@@ -89,7 +92,6 @@ def create():
 @app.route("/fetchData/<name>",methods=['GET','POST'])
 def fetchData(name):
     db = client1['Predefine']
-    print("===================="+str(name))
     collection = db[name]
     df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
     desc = df1.describe().reset_index()
@@ -102,7 +104,6 @@ def createSelection():
     dc = json.loads(payload)
     userId = dc.get('id')
     column = dc.get('item')
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     x = list(collection.find({'_id':userId},{'_id':False}))
@@ -132,7 +133,6 @@ def selection():
     column = dc.get('item')
     dataSet = dc.get('dataset')
     collection = db[dataSet]
-
     df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False}))) 
     X = df1[:][column]
     y = df1[:]['target']
@@ -141,23 +141,19 @@ def selection():
     test = pd.concat([X_test.reset_index(drop='True'),y_test.reset_index(drop='True')],axis=1)     
     train = train.to_dict('records')
     test = test.to_dict('records')
-
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     collection.update({'_id':userId}, { '$set':{'data.train': train } })
     collection.update({'_id':userId}, { '$set':{'data.test': test } })
     column.append('target')
-    df1 = df1[:][column]    
+    df1 = df1[:][column]
     return df1.to_json(orient="index")
 
 @app.route("/splitData",methods=['GET','POST'])
 def splitData():
     payload = request.args.get("payload")
     dc = json.loads(payload)
-    userId = dc.get('id')
-    
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
+    userId = dc.get('id')    
     db = client['User']
     collection = db['Data']
     temp = collection.find({'_id':userId})
@@ -172,8 +168,6 @@ def model():
     dc = json.loads(payload)
     algorithm = dc.get("algorithm")
     userId = dc.get("id")
-
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -246,15 +240,13 @@ def model():
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
         print('ridge')
     
-
-    return "From model"
+    return "Model Trained"
 
 @app.route('/predict',methods=['GET','POST'])
 def predicted():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get("id")
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -283,7 +275,6 @@ def visualize():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get("id")
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -296,7 +287,6 @@ def getTree():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get('id')
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -314,7 +304,6 @@ def getTree():
     figfile.seek(0)
     figdata_png = base64.b64encode(figfile.getvalue())
     figdata_png.decode("utf-8") 
-    print(type(figdata_png))
     return figdata_png
     
 @app.route("/boxplot",methods=['GET','POST'])
@@ -322,7 +311,6 @@ def boxplot():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get('id')
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -343,7 +331,6 @@ def corr():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get('id')
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
