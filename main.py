@@ -35,9 +35,10 @@ app = Flask(__name__)
 CORS(app)
 app.register_blueprint(classification, url_prefix="/classification")
 app.register_blueprint(regression, url_prefix="/regression")
+app.config.from_pyfile("config.py")
 
-client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')
-client1 = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/Predefine?retryWrites=true&w=majority')
+client = MongoClient(app.config['MONGO1'])
+client1 = MongoClient(app.config['MONGO2'])
 
 
 @app.route("/addId",methods=['GET','POST'])
@@ -77,8 +78,6 @@ def create():
     col_name="index"
     first_col = desc.pop(col_name)
     desc.insert(0, col_name, first_col)
-    print(desc)
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     raw = df1.to_dict('records')
@@ -89,7 +88,6 @@ def create():
 @app.route("/fetchData/<name>",methods=['GET','POST'])
 def fetchData(name):
     db = client1['Predefine']
-    print("===================="+str(name))
     collection = db[name]
     df1 = pd.DataFrame(list(collection.find({},{'_id':False,'index':False})))
     desc = df1.describe().reset_index()
@@ -102,7 +100,6 @@ def createSelection():
     dc = json.loads(payload)
     userId = dc.get('id')
     column = dc.get('item')
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     x = list(collection.find({'_id':userId},{'_id':False}))
@@ -142,7 +139,6 @@ def selection():
     train = train.to_dict('records')
     test = test.to_dict('records')
 
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     collection.update({'_id':userId}, { '$set':{'data.train': train } })
@@ -157,7 +153,6 @@ def splitData():
     dc = json.loads(payload)
     userId = dc.get('id')
     
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     temp = collection.find({'_id':userId})
@@ -173,7 +168,6 @@ def model():
     algorithm = dc.get("algorithm")
     userId = dc.get("id")
 
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -186,35 +180,30 @@ def model():
         model.fit(X_train, np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('log')
     
     elif algorithm == "knear":
         model = KNeighborsClassifier(n_neighbors=5)
         model.fit(X_train, np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print("knear")
 
     elif algorithm == "naive":
         model = GaussianNB()
         model.fit(X_train,np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print("naive")
     
     elif algorithm == "dtree":
         model = DecisionTreeClassifier()
         model.fit(X_train,np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print("dtree")
     
     elif algorithm == "rtree":
         model=RandomForestClassifier(n_estimators=50)
         model.fit(X_train,np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('rtree')
 
     #both
     elif algorithm == "svm":
@@ -222,7 +211,6 @@ def model():
         model.fit(X_train, np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print("svm")
 
     # Regression Algorithm
     elif algorithm == 'linearRegression':
@@ -230,31 +218,27 @@ def model():
         model.fit(X_train, y_train)
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('linear')
 
     elif algorithm == 'logisticRegression':
         model = linear_model.LogisticRegression(random_state=0)
         model.fit(X_train, y_train)
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('logR')
     
     elif algorithm == 'ridge':
         model = linear_model.Ridge(normalize=True)
         model.fit(X_train,y_train)
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('ridge')
     
 
-    return "From model"
+    return "Model Trained"
 
 @app.route('/predict',methods=['GET','POST'])
 def predicted():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get("id")
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -283,7 +267,6 @@ def visualize():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get("id")
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -296,7 +279,6 @@ def getTree():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get('id')
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -314,7 +296,6 @@ def getTree():
     figfile.seek(0)
     figdata_png = base64.b64encode(figfile.getvalue())
     figdata_png.decode("utf-8") 
-    print(type(figdata_png))
     return figdata_png
     
 @app.route("/boxplot",methods=['GET','POST'])
@@ -322,7 +303,6 @@ def boxplot():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get('id')
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -343,13 +323,11 @@ def corr():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get('id')
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
     final = pd.DataFrame(data[0]['data']['result'])
-    final = final.round(2)
-    x = final.corr(method="pearson").reset_index() 
+    x = final.corr(method="pearson").reset_index().round(2)
     return x.to_json(orient="index")
 
 if __name__ =='__main__':

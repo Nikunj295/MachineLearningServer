@@ -5,4 +5,5 @@ test.py
 test1.py
 test3.py
 testmongo.py
-text
+.flaskenv
+.env
