@@ -33,11 +33,6 @@ from io import BytesIO
 
 app = Flask(__name__)
 CORS(app)
-# app.register_blueprint(classification, url_prefix="/classification")
-# app.register_blueprint(regression, url_prefix="/regression")
-
-# app.config.from_pyfile('config.py')
-
 client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')
 client1 = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/Predefine?retryWrites=true&w=majority')
 
@@ -180,35 +175,30 @@ def model():
         model.fit(X_train, np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('log')
     
     elif algorithm == "knear":
         model = KNeighborsClassifier(n_neighbors=5)
         model.fit(X_train, np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print("knear")
 
     elif algorithm == "naive":
         model = GaussianNB()
         model.fit(X_train,np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print("naive")
     
     elif algorithm == "dtree":
         model = DecisionTreeClassifier()
         model.fit(X_train,np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print("dtree")
     
     elif algorithm == "rtree":
         model=RandomForestClassifier(n_estimators=50)
         model.fit(X_train,np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('rtree')
 
     #both
     elif algorithm == "svm":
@@ -216,7 +206,6 @@ def model():
         model.fit(X_train, np.ravel(y_train))
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print("svm")
 
     # Regression Algorithm
     elif algorithm == 'linearRegression':
@@ -224,21 +213,18 @@ def model():
         model.fit(X_train, y_train)
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('linear')
 
     elif algorithm == 'logisticRegression':
         model = linear_model.LogisticRegression(random_state=0)
         model.fit(X_train, y_train)
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('logR')
     
     elif algorithm == 'ridge':
         model = linear_model.Ridge(normalize=True)
         model.fit(X_train,y_train)
         pickled_model = pickle.dumps(model)
         collection.update(  { '_id':userId} , { '$set': { 'data.model' : pickled_model  } } )
-        print('ridge')
     
     return "Model Trained"
 

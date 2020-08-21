@@ -22,7 +22,6 @@ import numpy as np
 
 classification = Blueprint('classification', __name__)
 CORS(classification)
-client1 = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/Predefine?retryWrites=true&w=majority')
 
 @classification.route("/")
 def home():
@@ -161,7 +160,6 @@ def selection():
     train = train.to_dict('records')
     test = test.to_dict('records')
 
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     collection.update({'_id':userId}, { "_id": userId, 'data': { 'train' : train , 'test' : test , 'model' : "" } ,'createdAt': datetime.datetime.utcnow()})
@@ -175,7 +173,6 @@ def splitData():
     dc = json.loads(payload)
     userId = dc.get('id')
     
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     temp = collection.find({'_id':userId})
@@ -191,7 +188,6 @@ def model():
     algorithm = dc.get("algorithm")
     userId = dc.get("id")
 
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))
@@ -273,7 +269,6 @@ def predicted():
     payload = request.args.get("payload")
     dc = json.loads(payload)
     userId = dc.get("id")
-    client = MongoClient('mongodb+srv://nikunj:tetsu@dataframe.cbwqw.mongodb.net/User?retryWrites=true&w=majority')    
     db = client['User']
     collection = db['Data']
     data = list(collection.find({'_id':userId}))

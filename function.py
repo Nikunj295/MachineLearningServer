@@ -25,8 +25,6 @@ def get_params(params):
     clust = int(params["clust"]) if 'clust' in temp and params['clust']!=''else 2
     no_of_columns = int(params["cols"]) if 'cols' in temp and params['cols']!='' else 2
     knear = int(params["knear"]) if 'knear' in temp and params['knear']!='' else 5
-    # kernel = str(params['kernel']) if 'kernel' in temp else "linear"
-    # max_depth = int(params['max_depth']) if 'max_depth' in temp else None
 
     if 'max_depth' in temp and params['max_depth']!='':
         max_depth = int(params['max_depth'])

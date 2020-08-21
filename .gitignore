@@ -1,8 +1,7 @@
 /venv
 /client/node_modules
 /__pycache__
-test.py
-test1.py
-test3.py
-testmongo.py
-text
+.env
+.flaskenv
+Classification.py
+Regression.py
